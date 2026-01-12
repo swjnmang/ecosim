@@ -63,7 +63,6 @@ export default function JoinPage() {
 
       // PlayerSession erstellen
       const playerSession: Omit<PlayerSession, 'id'> = {
-        userId: user.uid,
         lobbyId: lobby.id,
         companyId: '', // Wird später beim Unternehmen erstellen gesetzt
         ownerUid: user.uid,
