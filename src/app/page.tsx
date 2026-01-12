@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 p-4">
@@ -9,7 +11,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Schüler */}
-          <a
+          <Link
             href="/join"
             className="p-8 bg-white rounded-lg shadow-md hover:shadow-lg transition border-2 border-blue-500"
           >
@@ -19,11 +21,11 @@ export default function Home() {
             <p className="text-gray-600">
               Tritt einer Lobby mit deinem PIN-Code bei und starte dein Abenteuer
             </p>
-          </a>
+          </Link>
 
           {/* Lehrkraft */}
-          <a
-            href="/login"
+          <Link
+            href="/teacher/login"
             className="p-8 bg-white rounded-lg shadow-md hover:shadow-lg transition border-2 border-green-500"
           >
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
@@ -32,7 +34,7 @@ export default function Home() {
             <p className="text-gray-600">
               Melde dich an, um Lobbys zu erstellen und Schüler zu überwachen
             </p>
-          </a>
+          </Link>
         </div>
 
         <div className="mt-12 p-6 bg-white rounded-lg shadow text-left">
