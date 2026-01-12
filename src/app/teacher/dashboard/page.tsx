@@ -264,7 +264,17 @@ export default function TeacherDashboardPage() {
                     <span>Erstellt:</span>
                     <span>
                       {lobby.createdAt
-                        ? new Date(lobby.createdAt.toDate()).toLocaleDateString('de-DE')
+                        ? (() => {
+                            let date: Date;
+                            if (lobby.createdAt instanceof Date) {
+                              date = lobby.createdAt;
+                            } else if (typeof (lobby.createdAt as any).toDate === 'function') {
+                              date = (lobby.createdAt as any).toDate();
+                            } else {
+                              return 'Unbekannt';
+                            }
+                            return date.toLocaleDateString('de-DE');
+                          })()
                         : 'Unbekannt'}
                     </span>
                   </div>
