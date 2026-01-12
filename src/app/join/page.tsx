@@ -65,13 +65,24 @@ export default function JoinPage() {
       const playerSession: Omit<PlayerSession, 'id'> = {
         userId: user.uid,
         lobbyId: lobby.id,
-        nickname: displayName.trim(),
-        role: 'student',
-        joinedAt: serverTimestamp() as any,
-        lastActivity: serverTimestamp() as any,
-        xp: 0,
+        companyId: '', // Wird später beim Unternehmen erstellen gesetzt
+        ownerUid: user.uid,
+        anonPlayerCode: user.uid.slice(0, 8),
+        displayName: displayName.trim(),
+        role: 'Auszubildender',
+        experience: 0,
         level: 1,
         badges: [],
+        progress: 'onboarding',
+        skills: {
+          einkauf: 0,
+          verkauf: 0,
+          kalkulation: 0,
+          buchung: 0,
+          marketing: 0,
+        },
+        lastActiveAt: new Date(),
+        createdAt: new Date(),
       };
 
       await addDoc(collection(db, 'playerSessions'), playerSession);
