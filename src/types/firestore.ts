@@ -1,10 +1,18 @@
 // src/types/firestore.ts
 
+export interface Teacher {
+  id: string; // Firebase Auth UID
+  email: string;
+  displayName?: string;
+  createdAt: Date;
+  lastLoginAt: Date;
+}
+
 export interface Lobby {
   id: string;
-  pin: string; // 4-6 digit code
+  pin: string; // 4-6 digit code (z.B. ABC123)
   name: string;
-  teacherId: string;
+  teacherId: string; // Teacher.id (Firebase Auth UID)
   modules: {
     einkauf: boolean;
     verkauf: boolean;
@@ -75,7 +83,8 @@ export interface Lobby {
   hintsEnabled: boolean;
   hintStrength: 'light' | 'medium' | 'strong';
   createdAt: Date;
-  status: 'open' | 'closed';
+  lastActivityAt: Date;
+  status: 'active' | 'archived'; // active = dauerhaft nutzbar, archived = versteckt
 }
 
 export interface Company {
