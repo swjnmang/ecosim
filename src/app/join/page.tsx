@@ -59,14 +59,20 @@ export default function JoinPage() {
       const lobby = { id: lobbyDoc.id, ...lobbyDoc.data() } as Lobby;
 
       // Schüler anonym anmelden
-      const user = await loginStudentAnonymous();
+      const loginResult = await loginStudentAnonymous();
+      if (!loginResult.success || !loginResult.uid) {
+        setError(loginResult.error || 'Anonymer Login fehlgeschlagen');
+        setLoading(false);
+        return;
+      }
+      const anonUid = loginResult.uid;
 
       // PlayerSession erstellen
       const playerSession: Omit<PlayerSession, 'id'> = {
         lobbyId: lobby.id,
         companyId: '', // Wird später beim Unternehmen erstellen gesetzt
-        ownerUid: user.uid,
-        anonPlayerCode: user.uid.slice(0, 8),
+        ownerUid: anonUid,
+        anonPlayerCode: anonUid.slice(0, 8),
         displayName: displayName.trim(),
         role: 'Auszubildender',
         experience: 0,
