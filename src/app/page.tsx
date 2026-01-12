@@ -6,7 +6,7 @@ export default function Home() {
       <div className="max-w-2xl text-center">
         <h1 className="text-5xl font-bold text-gray-900 mb-4">EcoSim</h1>
         <p className="text-xl text-gray-600 mb-12">
-          Wirtschaftssimulation für Kaufmänner im Büromanagement
+          Wirtschaftssimulation für das Fach Übungsunternehmen
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -16,7 +16,7 @@ export default function Home() {
             className="p-8 bg-white rounded-lg shadow-md hover:shadow-lg transition border-2 border-blue-500"
           >
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              🎮 Spielen
+              🎮 Beitreten
             </h2>
             <p className="text-gray-600">
               Tritt einer Lobby mit deinem PIN-Code bei und starte dein Abenteuer
