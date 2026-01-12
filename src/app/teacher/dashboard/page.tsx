@@ -47,9 +47,17 @@ export default function TeacherDashboardPage() {
       id: doc.id,
       ...doc.data(),
     })) as Lobby[];
-    setLobbies(lobbiesData.sort((a, b) => 
-      (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)
-    ));
+    const getMs = (value: any) => {
+      if (!value) return 0;
+      if (value instanceof Date) return value.getTime();
+      if (typeof value.toMillis === 'function') return value.toMillis();
+      if (typeof value.seconds === 'number') return value.seconds * 1000;
+      return 0;
+    };
+
+    setLobbies(
+      lobbiesData.sort((a, b) => getMs(b.createdAt) - getMs(a.createdAt))
+    );
   };
 
   const handleCreateLobby = async () => {
