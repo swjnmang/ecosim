@@ -110,9 +110,9 @@ export interface Company {
 export interface PlayerSession {
   id: string;
   lobbyId: string;
-  companyId: string; // Zugehöriges Unternehmen
-  ownerUid: string; // Firebase auth uid (anonymous or teacher)
-  anonPlayerCode: string;
+  companyId?: string; // Zugehöriges Unternehmen (optional beim Erstellen)
+  ownerUid?: string; // Firebase auth uid (optional)
+  anonPlayerCode?: string; // Optional
   displayName?: string;
   role: 'Auszubildender' | 'Sachbearbeiter' | 'Abteilungsleiter'; // Kann später erweitert werden
   experience: number; // Persönliche XP
