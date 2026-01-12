@@ -24,13 +24,17 @@ export async function registerTeacher(
   displayName?: string
 ): Promise<{ success: boolean; error?: string; teacherId?: string }> {
   try {
+    console.log('Starting teacher registration for:', email);
+    
     // Firebase Auth User erstellen
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    console.log('Firebase Auth user created:', user.uid);
 
     // Display Name setzen (falls angegeben)
     if (displayName) {
       await updateProfile(user, { displayName });
+      console.log('Display name set:', displayName);
     }
 
     // Teacher-Dokument in Firestore erstellen
@@ -41,14 +45,20 @@ export async function registerTeacher(
       lastLoginAt: new Date(),
     };
 
+    console.log('Creating Firestore document...');
     await setDoc(doc(db, 'teachers', user.uid), {
       ...teacherData,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
     });
+    console.log('Firestore document created successfully');
 
     return { success: true, teacherId: user.uid };
   } catch (error: any) {
+    console.error('Registration error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    
     let errorMessage = 'Registrierung fehlgeschlagen';
     
     switch (error.code) {
@@ -61,6 +71,8 @@ export async function registerTeacher(
       case 'auth/invalid-email':
         errorMessage = 'Ungültige E-Mail-Adresse';
         break;
+      default:
+        errorMessage = `Fehler: ${error.message || error.code || 'Unbekannter Fehler'}`;
     }
 
     return { success: false, error: errorMessage };

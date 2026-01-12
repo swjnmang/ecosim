@@ -30,12 +30,20 @@ export default function TeacherRegisterPage() {
 
     setLoading(true);
 
-    const result = await registerTeacher(email, password, displayName || undefined);
+    try {
+      console.log('Registering teacher with email:', email);
+      const result = await registerTeacher(email, password, displayName || undefined);
+      console.log('Registration result:', result);
 
-    if (result.success) {
-      router.push('/teacher/dashboard');
-    } else {
-      setError(result.error || 'Registrierung fehlgeschlagen');
+      if (result.success) {
+        router.push('/teacher/dashboard');
+      } else {
+        setError(result.error || 'Registrierung fehlgeschlagen');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(`Fehler: ${err.message || 'Unbekannter Fehler'}`);
       setLoading(false);
     }
   };
