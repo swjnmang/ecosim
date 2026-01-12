@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isTeacher() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function isAnon() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function lobbyOwner(lobbyId) {
+      return get(/databases/$(database)/documents/lobbies/$(lobbyId)).data.teacherId;
+    }
+
+    function isLobbyOwner(lobbyId) {
+      return isTeacher() && lobbyOwner(lobbyId) == request.auth.uid;
+    }
+
+    function sessionOwnerUid(sessionId) {
+      return get(/databases/$(database)/documents/sessions/$(sessionId)).data.ownerUid;
+    }
+
+    function isSessionOwner(sessionId) {
+      return request.auth != null && sessionOwnerUid(sessionId) == request.auth.uid;
+    }
+
+    // Lobbies: Students need basic read access (PIN + settings), teachers manage their own.
+    match /lobbies/{lobbyId} {
+      allow read: if true;
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+
+    // Sessions: Created by anonymous student (or teacher for testing), owned via ownerUid.
+    match /sessions/{sessionId} {
+      allow create: if (isAnon() || isTeacher())
+        && request.resource.data.ownerUid == request.auth.uid
+        && exists(/databases/$(database)/documents/lobbies/$(request.resource.data.lobbyId));
+
+      allow read, update, delete: if isSessionOwner(sessionId)
+        || (isTeacher() && isLobbyOwner(resource.data.lobbyId));
+    }
+
+    // Tasks: Teacher creates; student reads and updates own tasks (submit/answers).
+    match /tasks/{taskId} {
+      allow create: if isTeacher() && isLobbyOwner(request.resource.data.lobbyId);
+      allow read: if isSessionOwner(resource.data.sessionId)
+        || (isTeacher() && isLobbyOwner(resource.data.lobbyId));
+      allow update: if isSessionOwner(resource.data.sessionId)
+        || (isTeacher() && isLobbyOwner(resource.data.lobbyId));
+      allow delete: if isTeacher() && isLobbyOwner(resource.data.lobbyId);
+    }
+
+    // ProgramState: state per session/program; student owns their session state.
+    match /programState/{stateId} {
+      allow create: if isSessionOwner(request.resource.data.sessionId)
+        || (isTeacher() && isLobbyOwner(request.resource.data.lobbyId));
+      allow read, update, delete: if isSessionOwner(resource.data.sessionId)
+        || (isTeacher() && isLobbyOwner(resource.data.lobbyId));
+    }
+
+    // Templates: public-readable content snippets; write via controlled deployment only.
+    match /templates/{templateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Reports: restricted to authenticated teachers.
+    match /reports/{reportId} {
+      allow create, read, update, delete: if isTeacher();
+    }
+  }
+}

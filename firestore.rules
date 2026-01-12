@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Lobbies: Teachers can read/write their own
+    match /lobbies/{lobbyId} {
+      allow read, write: if request.auth.uid != null && request.auth.uid == resource.data.teacherId;
+      allow read: if request.auth == null; // Allow PIN lookup
+    }
+
+    // Sessions: Authorized users can read their own
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/lobbies/$(request.resource.data.lobbyId)).data.teacherId
+                  || request.auth == null; // Anonymous players
+      allow create: if request.auth == null; // Schüler create anonymous sessions
+      allow write: if request.auth == null && request.resource.data.id == resource.data.id;
+    }
+
+    // Tasks: Linked to sessions/lobbies
+    match /tasks/{taskId} {
+      allow read: if request.auth == null
+                  || request.auth.uid == get(/databases/$(database)/documents/lobbies/$(resource.data.lobbyId)).data.teacherId;
+      allow create: if request.auth == null;
+      allow write: if request.auth == null && request.resource.data.sessionId == resource.data.sessionId;
+    }
+
+    // ProgramState: Players can read/write their own
+    match /programState/{stateId} {
+      allow read, write: if request.auth == null && request.resource.data.sessionId == resource.data.sessionId
+                         || request.auth != null;
+    }
+
+    // Templates: Read-only for all
+    match /templates/{templateId} {
+      allow read: if true;
+    }
+
+    // Reports: Only teachers for their lobbies
+    match /reports/{reportId} {
+      allow read: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/lobbies/$(resource.data.lobbyId)).data.teacherId;
+    }
+  }
+}
