@@ -246,12 +246,22 @@ export function createMarketEvent(
 ): Omit<MarketEvent, 'id' | 'lobbyId' | 'createdAt'> {
   const template = MARKET_EVENT_TEMPLATES[type];
   
+  // Bestimme Event-Type basierend auf dem Template-Key
+  let eventType: MarketEvent['type'];
+  if (type.includes('price')) {
+    eventType = 'price-change';
+  } else if (type.includes('demand')) {
+    eventType = (template.impact.demandChange && template.impact.demandChange > 0) ? 'demand-spike' : 'demand-drop';
+  } else if (type.includes('supplier')) {
+    eventType = 'supplier-issue';
+  } else if (type.includes('competitor')) {
+    eventType = 'new-competitor';
+  } else {
+    eventType = 'trend';
+  }
+  
   return {
-    type: type.includes('price') ? 'price-change' :
-          type.includes('demand') ? (template.impact.demandChange! > 0 ? 'demand-spike' : 'demand-drop') :
-          type.includes('supplier') ? 'supplier-issue' :
-          type.includes('competitor') ? 'new-competitor' :
-          'trend',
+    type: eventType,
     title: template.title,
     description: template.description,
     affectedProducts,
