@@ -251,7 +251,9 @@ export function createMarketEvent(
   if (type.includes('price')) {
     eventType = 'price-change';
   } else if (type.includes('demand')) {
-    eventType = (template.impact.demandChange && template.impact.demandChange > 0) ? 'demand-spike' : 'demand-drop';
+    // Sichere Prüfung: demandChange kann undefined sein
+    const demandChange = 'demandChange' in template.impact ? template.impact.demandChange : 0;
+    eventType = (demandChange && demandChange > 0) ? 'demand-spike' : 'demand-drop';
   } else if (type.includes('supplier')) {
     eventType = 'supplier-issue';
   } else if (type.includes('competitor')) {
