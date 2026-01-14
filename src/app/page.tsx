@@ -35,6 +35,32 @@ export default function Home() {
               Melde dich an, um Lobbys zu erstellen und Schüler zu überwachen
             </p>
           </Link>
+
+          {/* School Admin */}
+          <Link
+            href="/school-admin/login"
+            className="p-8 bg-white rounded-lg shadow-md hover:shadow-lg transition border-2 border-blue-700"
+          >
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              🏫 Schuladmin
+            </h2>
+            <p className="text-gray-600">
+              Verwalte deine Schule und lege Lehrkräfte an
+            </p>
+          </Link>
+
+          {/* Developer */}
+          <Link
+            href="/developer/login"
+            className="p-8 bg-white rounded-lg shadow-md hover:shadow-lg transition border-2 border-purple-500"
+          >
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              🔧 Entwickler
+            </h2>
+            <p className="text-gray-600">
+              Lege neue Schulen an und verwalte das System
+            </p>
+          </Link>
         </div>
 
         <div className="mt-12 p-6 bg-white rounded-lg shadow text-left">
