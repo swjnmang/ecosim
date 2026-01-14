@@ -39,15 +39,17 @@ export async function registerTeacher(
     }
 
     // Teacher-Dokument in Firestore erstellen
-    const teacherData: Omit<Teacher, 'id'> = {
+    const teacherData: Omit<User, 'id'> = {
       email: user.email!,
       displayName: displayName || undefined,
+      role: 'teacher',
+      isLegacy: true, // Mark as legacy since this is old registration method
       createdAt: new Date(),
       lastLoginAt: new Date(),
     };
 
     console.log('Creating Firestore document...');
-    await setDoc(doc(db, 'teachers', user.uid), {
+    await setDoc(doc(db, 'users', user.uid), {
       ...teacherData,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
