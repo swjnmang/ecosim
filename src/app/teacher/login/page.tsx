@@ -83,10 +83,10 @@ export default function TeacherLoginPage() {
 
         <div className="mt-6 space-y-4 text-center text-sm">
           <Link
-            href="/teacher/register"
+            href="/teacher/reset-password"
             className="block text-indigo-600 hover:text-indigo-700 font-medium"
           >
-            Noch kein Account? Jetzt registrieren
+            Passwort vergessen?
           </Link>
           
           <div className="pt-6 border-t border-gray-200">

@@ -1,12 +1,29 @@
 // src/types/firestore.ts
 
-export interface Teacher {
+export interface School {
+  id: string; // Auto-generated
+  name: string;
+  numberOfStudents: number;
+  contactEmail: string;
+  adminId: string; // User ID of the school admin
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface User {
   id: string; // Firebase Auth UID
   email: string;
   displayName?: string;
+  role: 'developer' | 'school-admin' | 'teacher';
+  schoolId?: string; // For school-admin and teacher roles
+  createdBy?: string; // User ID who created this user
+  isLegacy?: boolean; // For existing teacher accounts before the new system
   createdAt: Date;
   lastLoginAt: Date;
 }
+
+// Legacy type for backwards compatibility
+export type Teacher = User;
 
 export interface Lobby {
   id: string;
