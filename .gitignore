@@ -9,3 +9,7 @@ dist/
 .DS_Store
 .vercel
 .firebase/
+
+# Firebase Service Account Keys (NEVER commit these!)
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
