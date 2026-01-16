@@ -161,8 +161,14 @@ export async function loginStudentAnonymous(): Promise<{ success: boolean; error
 /**
  * Logout (für Lehrer und Schüler)
  */
-export async function signOut(): Promise<void> {
-  await firebaseSignOut(auth);
+export async function signOut(): Promise<{ success: boolean; error?: string }> {
+  try {
+    await firebaseSignOut(auth);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Sign out error:', error);
+    return { success: false, error: 'Abmeldung fehlgeschlagen' };
+  }
 }
 
 /**
