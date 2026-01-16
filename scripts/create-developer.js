@@ -24,9 +24,9 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 // Developer-Informationen
-const DEVELOPER_EMAIL = 'mailtomangold@gmail.com';
-const DEVELOPER_PASSWORD = 'developer123';
-const DEVELOPER_NAME = 'Jonathan Mangold';
+const DEVELOPER_EMAIL = 'developer@ecosim.local';
+const DEVELOPER_PASSWORD = 'Developer@12345';
+const DEVELOPER_NAME = 'EcoSim Developer';
 
 async function createDeveloper() {
   try {
