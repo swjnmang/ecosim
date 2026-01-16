@@ -7,7 +7,10 @@ import {
   signInAnonymously,
   signOut as firebaseSignOut,
   User as FirebaseUser,
-  updateProfile
+  updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -225,12 +228,27 @@ export async function loginDeveloper(
   password: string
 ): Promise<{ success: boolean; error?: string; userId?: string }> {
   try {
+    console.log('Developer login attempt for email:', email);
+    
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    console.log('Firebase auth successful, UID:', user.uid);
 
     // Check if user is developer
     const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userDoc.exists() || userDoc.data()?.role !== 'developer') {
+    console.log('Firestore document exists:', userDoc.exists());
+    
+    if (!userDoc.exists()) {
+      console.error('User document does not exist in Firestore');
+      await firebaseSignOut(auth);
+      return { success: false, error: 'Benutzerdokument nicht gefunden' };
+    }
+    
+    const userData = userDoc.data();
+    console.log('User role:', userData?.role);
+    
+    if (userData?.role !== 'developer') {
+      console.error('User is not a developer, role is:', userData?.role);
       await firebaseSignOut(auth);
       return { success: false, error: 'Keine Entwickler-Berechtigung' };
     }
@@ -241,9 +259,14 @@ export async function loginDeveloper(
       { lastLoginAt: serverTimestamp() },
       { merge: true }
     );
+    console.log('Developer login successful');
 
     return { success: true, userId: user.uid };
   } catch (error: any) {
+    console.error('Developer login error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    
     let errorMessage = 'Login fehlgeschlagen';
     
     switch (error.code) {
@@ -253,6 +276,9 @@ export async function loginDeveloper(
         break;
       case 'auth/invalid-email':
         errorMessage = 'Ungültige E-Mail-Adresse';
+        break;
+      case 'permission-denied':
+        errorMessage = 'Firestore Zugriff verweigert - überprüfe die Security Rules';
         break;
     }
 
@@ -448,4 +474,111 @@ export async function createTeacherByAdmin({
   }
 }
 
-// ========== LEGACY TEACHER FUNCTIONS (Keep for backwards compatibility) ==========
+// ========== PROFIL-VERWALTUNG ==========
+
+/**
+ * Ändere das Passwort des aktuellen Benutzers
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      return { success: false, error: 'Kein Nutzer angemeldet' };
+    }
+
+    // Re-authenticate user with current password
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // Change password
+    await updatePassword(user, newPassword);
+    console.log('Password updated successfully');
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Password change error:', error);
+    let errorMessage = 'Passwortänderung fehlgeschlagen';
+
+    switch (error.code) {
+      case 'auth/wrong-password':
+        errorMessage = 'Aktuelles Passwort ist falsch';
+        break;
+      case 'auth/weak-password':
+        errorMessage = 'Neues Passwort ist zu schwach (mindestens 6 Zeichen)';
+        break;
+      case 'auth/requires-recent-login':
+        errorMessage = 'Bitte melde dich erneut an, um dein Passwort zu ändern';
+        break;
+    }
+
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Aktualisiere das Benutzerprofil
+ */
+export async function updateUserProfile(
+  displayName: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return { success: false, error: 'Kein Nutzer angemeldet' };
+    }
+
+    await updateProfile(user, { displayName });
+
+    // Also update Firestore document
+    await setDoc(
+      doc(db, 'users', user.uid),
+      { displayName, lastUpdatedAt: serverTimestamp() },
+      { merge: true }
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Profile update error:', error);
+    return { success: false, error: 'Profilaktualisierung fehlgeschlagen' };
+  }
+}
+
+/**
+ * Rufe das aktuelle Benutzerprofil ab
+ */
+export async function getCurrentUserProfile(): Promise<{
+  success: boolean;
+  user?: any;
+  error?: string;
+}> {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return { success: false, error: 'Kein Nutzer angemeldet' };
+    }
+
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (!userDoc.exists()) {
+      return { success: false, error: 'Benutzerdokument nicht gefunden' };
+    }
+
+    return {
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || userDoc.data()?.displayName,
+        role: userDoc.data()?.role,
+        createdAt: userDoc.data()?.createdAt,
+      },
+    };
+  } catch (error: any) {
+    console.error('Get user profile error:', error);
+    return { success: false, error: 'Fehler beim Abrufen des Profils' };
+  }
+}
+
+// ========== LEGACY TEACHER FUNCTIONS (Keep for backwards compatibility) =========
