@@ -142,6 +142,12 @@ mehrere Belegtypen wandert, ohne dass Status-Logik in einem Mega-Objekt landet.
 | Hosting | Vercel (weiter) | Bereits deployt, EU-Region wählbar |
 | DB-Hosting | Supabase EU-Region (Frankfurt) zwingend | DSGVO |
 
+*Firebase wäre technisch ebenfalls möglich (EU-Hosting, ausgereiftes Realtime/Auth),
+wurde aber am 13.09.2026 bewusst zugunsten von Supabase verworfen – das
+relationale Modell passt besser zu den stark verknüpften Geschäftsdaten
+(Bestellung/Rechnung/Buchung/Lager) und späteren Auswertungen (Controlling,
+Kalkulationsberichte).*
+
 ---
 
 ## 7. Entscheidungen (13.09.2026)
