@@ -2,15 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Department } from "@/types/app";
+
+const DEPARTMENT_OPTIONS: { value: Department; label: string }[] = [
+  { value: "EINKAUF", label: "Einkauf" },
+  { value: "VERKAUF", label: "Verkauf" },
+  { value: "BUCHHALTUNG", label: "Buchhaltung" },
+];
 
 export default function PlayPage() {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [pseudonym, setPseudonym] = useState("");
+  const [department, setDepartment] = useState<Department>("EINKAUF");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    setError("");
+
     if (pin.trim().length !== 6) {
       setError("Die Spiel-PIN hat 6 Ziffern.");
       return;
@@ -19,9 +30,26 @@ export default function PlayPage() {
       setError("Wähle ein Pseudonym - keinen echten Namen.");
       return;
     }
-    // TODO: sobald Supabase/Prisma angebunden sind, hier PIN validieren,
-    // Participant mit Session-Token anlegen und companyId/department laden.
-    router.push("/app");
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: pin.trim(), pseudonym: pseudonym.trim(), department }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "Beitritt fehlgeschlagen.");
+        return;
+      }
+      router.push("/app");
+      router.refresh();
+    } catch {
+      setError("Verbindung fehlgeschlagen. Versuch es noch einmal.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -57,13 +85,29 @@ export default function PlayPage() {
           />
         </div>
 
+        <div>
+          <label className="mb-1 block text-xs text-gray-600">Abteilung</label>
+          <select
+            value={department}
+            onChange={(event) => setDepartment(event.target.value as Department)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          >
+            {DEPARTMENT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {error ? <p className="text-xs text-red-600">{error}</p> : null}
 
         <button
           type="submit"
-          className="rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-800"
+          disabled={submitting}
+          className="rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-60"
         >
-          Beitreten
+          {submitting ? "Beitreten..." : "Beitreten"}
         </button>
       </form>
     </main>

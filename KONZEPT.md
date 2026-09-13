@@ -257,15 +257,23 @@ Konzept steht, alle offenen Fragen sind entschieden (Abschnitt 7).
 6. ✅ Routen-Grundgerüst: `/`, `/play` (PIN-Beitritt), `/teacher`, `/admin`,
    `/app` (Desktop), `/app/[app]` (Einzel-Apps)
 
+7. ✅ Supabase-Projekt (EU-Region Frankfurt, Org "Matenkik") angelegt, Migration
+   + Seed laufen gegen die echte DB (6 Firmenvorlagen, 15 Produkte, 4 Lieferanten,
+   5 Kunden)
+8. ✅ PIN-Beitritt serverseitig umgesetzt (`/api/join`): legt Participant mit
+   Pseudonym, Abteilung und Session-Token an, Desktop liest echte Firma/Konto
+   aus der DB (`prisma/seed-dev.ts` liefert ein Demo-Spiel, PIN `123456`, für
+   Tests ohne fertige Lehrkraft-Auth)
+
 **Noch offen:**
-7. Supabase-Projekt (EU-Region) anlegen, Migration + Seed gegen echte DB laufen
-   lassen (lokal vorbereitet, siehe SETUP.md)
-8. Auth-Flows für Admin/Lehrkraft (Supabase Auth) real anbinden
-9. PIN-Beitritt für Teilnehmer:innen serverseitig umsetzen (Participant anlegen,
-   Session-Token statt Login)
-10. Posteingang-Workflow als erstes vertikales Feature Ende-zu-Ende (ein
+9. Auth-Flows für Admin/Lehrkraft (Supabase Auth) real anbinden - erst danach
+   können Lehrkräfte echte Spiele/Firmen selbst anlegen (aktuell nur über
+   `seed-dev.ts`)
+10. Mehrere Firmen pro Spiel + Firmenauswahl beim Beitritt (aktuell landet
+    jede:r Teilnehmer:in in der ersten Firma des Spiels)
+11. Posteingang-Workflow als erstes vertikales Feature Ende-zu-Ende (ein
     Vorgangstyp, z.B. Kundenanfrage → Angebot → Bestellung) inkl. Realtime-Test
     mit zwei gleichzeitigen Teilnehmer:innen derselben Firma
-11. Übrige Apps (Bestellungen, Warenannahme, Lieferanten, Kundensuche,
+12. Übrige Apps (Bestellungen, Warenannahme, Lieferanten, Kundensuche,
     Warenversand, Auftragsbearbeitung, Lager, Onlinebanking, Buchungssätze,
     Kalkulation) von Platzhalter zu echter Funktion

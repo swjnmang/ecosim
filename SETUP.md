@@ -24,6 +24,11 @@ Trage ein:
 
 ## 3. Datenbankschema anlegen
 
+> Die Prisma-CLI lädt nur `.env`, nicht `.env.local` (das liest ausschließlich
+> Next.js). Lege deshalb zusätzlich eine `.env` mit `DATABASE_URL` und
+> `DIRECT_URL` an (gleicher Inhalt wie in `.env.local`, siehe `.gitignore` -
+> beide Dateien werden nie committet).
+
 ```bash
 npm install
 npm run prisma:migrate
@@ -33,6 +38,15 @@ npm run db:seed
 Das legt alle Tabellen aus `prisma/schema.prisma` an und befüllt
 Firmenvorschläge, Produktkatalog, Lieferanten und Kunden mit den Daten aus
 `prisma/seed-data/`.
+
+Für lokale Tests des PIN-Beitritts, bevor die Lehrkraft-Auth-Flows gebaut sind:
+
+```bash
+npm run db:seed-dev
+```
+
+Legt ein Demo-Spiel mit PIN `123456` und einer zugeordneten Firma an
+(`prisma/seed-dev.ts` - nicht für Produktion gedacht).
 
 ## 4. Row Level Security (RLS)
 
