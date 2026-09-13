@@ -1,0 +1,315 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- Organisation / echte Accounts (Schul-Admin, Lehrkraft) -------------
+
+model Organization {
+  id        String      @id @default(cuid())
+  name      String
+  createdAt DateTime    @default(now())
+  admins    AdminUser[]
+  teachers  TeacherUser[]
+}
+
+model AdminUser {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  authUserId     String       @unique // Supabase auth.users.id
+  email          String       @unique
+  createdAt      DateTime     @default(now())
+}
+
+model TeacherUser {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  authUserId     String        @unique // Supabase auth.users.id
+  email          String        @unique
+  createdAt      DateTime      @default(now())
+  gameSessions   GameSession[]
+}
+
+// --- Spiel / Firmenvorlagen ----------------------------------------------
+
+enum GameSessionStatus {
+  GEPLANT
+  LAUFEND
+  BEENDET
+}
+
+model GameSession {
+  id              String            @id @default(cuid())
+  teacherId       String
+  teacher         TeacherUser       @relation(fields: [teacherId], references: [id])
+  name            String
+  pin             String            @unique
+  startingCapital Decimal           @default(10000) @db.Decimal(12, 2)
+  learningAreas   Json // Lernbereich-Konfiguration (Einkauf/Verkauf/Marketing/...)
+  status          GameSessionStatus @default(GEPLANT)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  // DSGVO: 90 Tage nach Spielende automatische Löschung, siehe KONZEPT.md Abschnitt 7
+  expiresAt       DateTime?
+  createdAt       DateTime          @default(now())
+  companies       Company[]
+}
+
+// Vorgefertigte Firmenvorschläge (Name + Icon), zur Auswahl beim Spiel-Setup.
+// Lehrkraft kann alternativ ein Company-Objekt ohne templateId frei anlegen.
+model CompanyTemplate {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  iconName    String // Tabler-Icon-Name, z.B. "bike"
+  description String?
+  companies   Company[]
+}
+
+model Company {
+  id             String           @id @default(cuid())
+  gameSessionId  String
+  gameSession    GameSession      @relation(fields: [gameSessionId], references: [id])
+  templateId     String?
+  template       CompanyTemplate? @relation(fields: [templateId], references: [id])
+  name           String
+  iconName       String
+  balance        Decimal          @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime         @default(now())
+  participants   Participant[]
+  inventoryItems InventoryItem[]
+  inboxItems     InboxItem[]
+  orders         Order[]
+  bookingEntries BookingEntry[]
+}
+
+// --- Teilnehmer:innen (pseudonym, kein Account) ---------------------------
+
+enum ParticipantDepartment {
+  EINKAUF
+  VERKAUF
+  BUCHHALTUNG
+}
+
+model Participant {
+  id              String                @id @default(cuid())
+  companyId       String
+  company         Company               @relation(fields: [companyId], references: [id])
+  pseudonym       String
+  department      ParticipantDepartment
+  // Zufälliges Session-Token statt Login/Passwort/Email. Kein Klarname-Feld -
+  // strukturell nicht vorhanden, siehe KONZEPT.md Abschnitt 3.
+  sessionToken    String                @unique
+  joinedAt        DateTime              @default(now())
+  performanceLogs PerformanceLog[]
+  orderSteps      OrderStep[]
+  bookingEntries  BookingEntry[]
+}
+
+// --- Produktkatalog, Lieferanten, Kunden (Fahrrad-/E-Bike-Zubehör) --------
+
+model Product {
+  id                String             @id @default(cuid())
+  name              String             @unique
+  category          String
+  description       String?
+  qualitySpecs      Json? // z.B. { "ladezyklen": 500, "reichweiteKm": 60 }
+  listPurchasePrice Decimal            @db.Decimal(10, 2)
+  listSalePrice     Decimal            @db.Decimal(10, 2)
+  createdAt         DateTime           @default(now())
+  supplierProducts  SupplierProduct[]
+  inventoryItems    InventoryItem[]
+}
+
+model Supplier {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  city       String
+  conditions Json? // Rabatt, Skonto, Lieferzeit
+  products   SupplierProduct[]
+}
+
+model SupplierProduct {
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  price      Decimal  @db.Decimal(10, 2)
+
+  @@unique([supplierId, productId])
+}
+
+enum CustomerType {
+  NPC
+  UNTERNEHMEN
+}
+
+model Customer {
+  id   String       @id @default(cuid())
+  name String       @unique
+  city String
+  type CustomerType @default(NPC)
+}
+
+// --- Lager -----------------------------------------------------------------
+
+model InventoryItem {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  // Bestandsänderungen laufen ausschließlich über atomare Postgres-Updates
+  // (z.B. UPDATE ... WHERE stock >= x), siehe KONZEPT.md Abschnitt 7
+  // (Team-Größe & Nebenläufigkeit) – kein Überverkauf bei gleichzeitigem Zugriff.
+  stock        Int      @default(0)
+  minStock     Int      @default(0)
+  reorderPoint Int      @default(0)
+  reserved     Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([companyId, productId])
+}
+
+// --- Posteingang & Auftrags-Pipeline ---------------------------------------
+
+enum InboxItemType {
+  KUNDENANFRAGE
+  CHEF_AUFTRAG
+  LIEFERANTEN_ANTWORT
+  SYSTEMHINWEIS
+}
+
+enum InboxItemStatus {
+  NEU
+  IN_BEARBEITUNG
+  ERLEDIGT
+  ABGELEHNT
+}
+
+model InboxItem {
+  id             String          @id @default(cuid())
+  companyId      String
+  company        Company         @relation(fields: [companyId], references: [id])
+  type           InboxItemType
+  status         InboxItemStatus @default(NEU)
+  subject        String
+  body           String
+  relatedOrderId String?
+  relatedOrder   Order?          @relation(fields: [relatedOrderId], references: [id])
+  createdAt      DateTime        @default(now())
+}
+
+enum OrderType {
+  EINKAUF
+  VERKAUF
+}
+
+// Wird beim Annehmen einer Kundenanfrage (Verkauf) oder Auslösen einer
+// Bestellung (Einkauf) erzeugt. orderNumber ist die für Teilnehmer:innen
+// sichtbare, in der Auftragsstatus-App durchsuchbare Nummer.
+model Order {
+  id               String         @id @default(cuid())
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id])
+  orderNumber      String         @unique
+  type             OrderType
+  counterpartyName String // Kunde oder Lieferant
+  createdAt        DateTime       @default(now())
+  closedAt         DateTime?
+  steps            OrderStep[]
+  inboxItems       InboxItem[]
+  quotes           Quote[]
+  deliveryNotes    DeliveryNote[]
+  invoices         Invoice[]
+  bookingEntries   BookingEntry[]
+}
+
+enum OrderStepStatus {
+  OFFEN
+  ERLEDIGT
+}
+
+// Eine Pipeline-Stufe eines Auftrags. sortIndex bestimmt die Reihenfolge in
+// der Auftragsstatus-Detailansicht. Erledigte Schritte mit documentType/
+// documentId sind dort anklickbar und öffnen das jeweilige Dokument.
+model OrderStep {
+  id                        String          @id @default(cuid())
+  orderId                   String
+  order                     Order           @relation(fields: [orderId], references: [id])
+  label                     String
+  sortIndex                 Int
+  status                    OrderStepStatus @default(OFFEN)
+  completedAt               DateTime?
+  completedByParticipantId  String?
+  completedByParticipant    Participant?    @relation(fields: [completedByParticipantId], references: [id])
+  documentType               String? // "Quote" | "DeliveryNote" | "Invoice"
+  documentId                 String?
+
+  @@unique([orderId, sortIndex])
+}
+
+model Quote {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  items      Json // [{ productId, quantity, price }]
+  discount   Decimal  @default(0) @db.Decimal(10, 2)
+  shipping   Decimal  @default(0) @db.Decimal(10, 2)
+  totalNet   Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+}
+
+model DeliveryNote {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  items     Json
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+  totalGross  Decimal   @db.Decimal(10, 2)
+  discountPct Decimal   @default(0) @db.Decimal(5, 2) // Skonto
+  dueDate     DateTime
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// --- Buchhaltung & Auswertung ----------------------------------------------
+
+model BookingEntry {
+  id                     String      @id @default(cuid())
+  companyId              String
+  company                Company     @relation(fields: [companyId], references: [id])
+  orderId                String?
+  order                  Order?      @relation(fields: [orderId], references: [id])
+  debitAccount           String
+  creditAccount          String
+  amount                 Decimal     @db.Decimal(12, 2)
+  bookedByParticipantId  String
+  bookedByParticipant    Participant @relation(fields: [bookedByParticipantId], references: [id])
+  createdAt              DateTime    @default(now())
+}
+
+// Basis für Tätigkeitsbericht/PDF am Ende einer Sitzung. Enthält bewusst
+// keinerlei personenbezogene Daten - nur participantId (Pseudonym).
+model PerformanceLog {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+  action        String
+  xpAwarded     Int         @default(0)
+  errorType     String?
+  createdAt     DateTime    @default(now())
+}

@@ -1,54 +1,37 @@
-# EcoSim - Übungsunternehmen Simulation 🏢
+# EcoSim – Übungsunternehmen-Simulation 🚲
 
-Eine realitätsnahe **Unternehmenssimulation** für Schülerinnen und Schüler der Wirtschaftsschule Bayern (Fach: Übungsunternehmen).
+Multiplayer-Simulation eines Großhandels für Fahrrad- und E-Bike-Zubehör, für
+den Übungsunternehmen-Unterricht (Wirtschaftsschule Bayern). Schüler:innen
+bearbeiten realitätsnahe Geschäftsvorfälle über einen Posteingang-Workflow:
+Einkauf, Verkauf, Kalkulation, Lagerhaltung, Buchungssätze.
 
-## 🎯 Features
+Das vollständige Konzept (Rollenmodell, DSGVO-Datenfluss, Datenmodell,
+UI-Konzept) steht in [KONZEPT.md](./KONZEPT.md). Der Code-Stand vor diesem
+Neuaufbau ist im Branch [`archive/v1`](https://github.com/swjnmang/ecosim/tree/archive/v1)
+gesichert.
 
-- **Multiplayer-Unternehmenssimulation** mit Wettbewerb am gemeinsamen Markt
-- **Vollständige Geschäftsprozesse:** Einkauf, Verkauf, Kalkulation, Buchung
-- **XP-System** mit Leveln und Badges für Motivation
-- **Lehrkraft-Steuerung** für individuelle Lernbereich-Aktivierung
-- **Kaufvertragsstörungen** zum Üben von Problemlösungen
-- **Prüfungsmodus** für gezielte Übungen
-- **Sportartikel-Handel:** 17 Produkte in 5 Kategorien
+## 🛠️ Tech-Stack
+
+- **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS
+- **Backend:** Supabase (Postgres, Auth, Realtime), Prisma als ORM
+- **Hosting:** Vercel
 
 ## 🚀 Quick Start
 
-### Entwicklung
-
 ```bash
-# Dependencies installieren
 npm install
-
-# Development Server starten
+cp .env.local.example .env.local   # Werte aus deinem Supabase-Projekt eintragen
+npm run prisma:migrate
+npm run db:seed
 npm run dev
 ```
 
 App läuft unter: http://localhost:3000
 
-### Deployment
-
-Siehe [SETUP.md](SETUP.md) für detaillierte Anweisungen zu:
-- Firebase-Konfiguration
-- Vercel-Deployment
-- Environment Variables
+Ausführliche Einrichtung (Supabase-Projekt, EU-Region, Env-Variablen,
+Vercel-Deployment): siehe [SETUP.md](./SETUP.md).
 
 ## 📚 Dokumentation
 
-- [PROJEKTSTAND.md](PROJEKTSTAND.md) - Aktueller Implementierungsstand
-- [SETUP.md](SETUP.md) - Firebase & Vercel Setup-Anleitung
-
-## 🛠️ Tech Stack
-
-- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend:** Firebase (Firestore, Authentication)
-- **Deployment:** Vercel
-- **Lernbereiche:** Einkauf, Verkauf, Marketing, Controlling, Finanzen
-
-## 📝 Lehrplan-Konformität
-
-Basierend auf dem bayerischen Lehrplan für Übungsunternehmen (zweistufige Wirtschaftsschule, Jgst. 10/11).
-
----
-
-**Entwickelt für die Wirtschaftsschule Bayern** 🎓
+- [KONZEPT.md](./KONZEPT.md) – Rollenmodell, DSGVO-Datenfluss, Datenmodell, UI-Konzept
+- [SETUP.md](./SETUP.md) – Supabase & Vercel Setup-Anleitung

@@ -94,11 +94,13 @@ der Schülerin/des Schülers.**
 | `TeacherUser` | Lehrkraft, echter Account |
 | `GameSession` | Ein Spieldurchlauf: PIN, Zeitraum, Lernbereich-Konfig, Status |
 | `Participant` | Pseudonymer Teilnehmer in genau einer GameSession, Session-Token statt Login, mit `department` (Einkauf/Verkauf/Buchhaltung) |
-| `Company` | Übungsunternehmen innerhalb einer GameSession, hat 1..n Participants mit geteiltem Live-Zustand (Lager, Konto) |
+| `Company` | Übungsunternehmen innerhalb einer GameSession, hat 1..n Participants mit geteiltem Live-Zustand (Lager, Konto); Name/Icon entweder aus `CompanyTemplate` übernommen oder von der Lehrkraft frei vergeben |
+| `CompanyTemplate` | Vorgefertigte Firmen-Vorschläge (Name + Logo/Icon, Branchen-passend) zur Auswahl beim Spiel-Setup |
 | `Product` | Katalogartikel, Branche: Fahrrad- & E-Bike-Zubehör |
 | `Supplier` / `Customer` | Handelspartner (NPC oder andere Companies) |
 | `InboxItem` | Vorgang im Posteingang: Typ (Kundenanfrage, Chef-Auftrag, Lieferanten-Antwort, Systemhinweis), Status, verknüpfte Belege |
-| `Quote` / `PurchaseOrder` / `SalesOrder` / `DeliveryNote` / `Invoice` | Beleg-Kette je Vorgang, mit klaren Zustandsübergängen |
+| `Order` | Wird beim Annehmen einer Kundenanfrage (Verkauf) oder Auslösen einer Bestellung (Einkauf) erzeugt. Bekommt eine **eindeutige, für die Firma fortlaufende Auftragsnummer**, Typ (Einkauf/Verkauf), Status-Pipeline (erledigte/offene Schritte), Zeitstempel je Schritt, verantwortliche:r Participant je Schritt |
+| `Quote` / `PurchaseOrder` / `SalesOrder` / `DeliveryNote` / `Invoice` | Beleg-Kette, jeweils einer `Order` zugeordnet, mit klaren Zustandsübergängen |
 | `Inventory` | Lagerbestand je Product je Company: Bestand, Mindestbestand, Meldebestand |
 | `BookingEntry` | Buchungssatz |
 | `PerformanceLog` | XP, Fehler, bearbeitete Vorgänge – Basis für den Tagesbericht |
@@ -184,16 +186,80 @@ mehrere Belegtypen wandert, ohne dass Status-Logik in einem Mega-Objekt landet.
 
 ---
 
-## 9. Nächste Schritte
+## 9. UI-Konzept: Desktop-Metapher
 
-Konzept steht, alle offenen Fragen sind entschieden (Abschnitt 7). Ab hier:
+Nach Login landet die Teilnehmer:in auf einem **Tablet-Grid-Desktop**
+(kein echtes Windows-Fenstersystem – App-Icons, Klick öffnet die App im
+Vollbild, Zurück-Button führt zum Desktop zurück). Bewusst einfacher als ein
+Mehrfenster-System, funktioniert zuverlässig auf Schul-Tablets/Laptops.
 
-1. Datenbankschema (Prisma) auf Basis Abschnitt 4 final entwerfen, inkl.
-   `department`-Feld und Realtime-fähiger Struktur für Inventory/Konto
-2. Alten Code als `archive/v1`-Branch sichern, main leeren
-3. Supabase-Projekt (EU-Region) + Vercel-Verbindung aufsetzen
-4. Neues Grundgerüst aufsetzen (Auth-Flows für Admin/Lehrkraft, PIN-Beitritt
-   für Teilnehmer:innen, leeres Dashboard je Rolle)
-5. Posteingang-Workflow als erstes vertikales Feature bauen (ein Vorgangstyp
-   Ende-zu-Ende, z.B. Kundenanfrage → Angebot → Bestellung), inkl. Realtime-Test
-   mit zwei gleichzeitigen Teilnehmer:innen derselben Firma
+**Sichtbarkeit:** Alle Icons sind für alle Teilnehmer:innen einer Firma
+sichtbar (voller Überblick über die Firma), unabhängig von der eigenen
+Abteilungsrolle. Klick auf ein Icon außerhalb der eigenen Abteilung öffnet
+eine **Nur-Lese-Ansicht** (z.B. Verkauf sieht den Kontostand im Onlinebanking,
+kann aber keine Buchung vornehmen) statt einer reinen Sperre – das dient dem
+Lerneffekt (Gesamtüberblick über den Betrieb), ohne fremde Bearbeitungsrechte
+zu geben. Genaue Nur-Lese- vs. komplett-gesperrt-Regelung wird pro App beim
+Bau festgelegt.
+
+**App-Übersicht (vorläufig, nach Abteilung gruppiert):**
+
+*Für alle (Basis-Apps):*
+- Posteingang – zentrale Arbeitsaufträge/Anfragen
+- Mein Unternehmen – Kontostand, Kennzahlen, Reputation
+- **Auftragsstatus** – Suche per Auftragsnummer, Liste aller laufenden
+  Aufträge der Firma, Detailansicht je Auftrag mit erledigten und offenen
+  Schritten (Pipeline). Auftragsnummer wird automatisch vergeben, sobald ein
+  Einkaufs- oder Verkaufsvorgang angenommen/ausgelöst wird
+- Feierabend/Tagesbericht – löst clientseitige PDF-Erstellung aus
+
+*Einkauf:* Bestellungen, Warenannahme, Lieferantenkartei
+*Verkauf:* Kundensuche, Warenversand, Auftragsbearbeitung
+*Einkauf & Verkauf gemeinsam:* Lager (Bestand, Mindest-/Meldebestand)
+*Buchhaltung:* Onlinebanking, Buchungssätze, Kalkulation
+
+Grobstruktur (Basis-Apps oben, darunter nach Abteilung gruppierte Icons) ist
+mit Wireframe bestätigt.
+
+**Auftragsstatus-Detailansicht:** Erledigte Pipeline-Schritte sind anklickbar
+und öffnen das jeweils zugehörige Dokument (z.B. das versendete Angebot, die
+Auftragsbestätigung) direkt zur Ansicht.
+
+**Firmen-Branding:** Beim Erstellen eines Spiels stellt das System (von mir
+vorab erstellte) **Firmen-Vorschläge** bereit (Name + Logo/Icon, passend zur
+Fahrrad-/E-Bike-Branche) – die Lehrkraft wählt daraus für ihre Spiele. Zusätzlich
+kann die Lehrkraft auch **eigene Unternehmen frei anlegen** (eigener Name,
+ggf. eigenes Icon) statt nur aus den Vorschlägen zu wählen. Teilnehmer:innen
+wählen selbst keinen Firmennamen.
+
+---
+
+## 10. Nächste Schritte
+
+Konzept steht, alle offenen Fragen sind entschieden (Abschnitt 7).
+
+**Erledigt:**
+1. ✅ Alter Code als `archive/v1`-Branch gesichert, main geleert
+2. ✅ Datenbankschema (`prisma/schema.prisma`) nach Abschnitt 4/9 entworfen –
+   inkl. `department`, `Order`/`OrderStep`-Pipeline mit klickbaren Dokumenten,
+   `CompanyTemplate`
+3. ✅ Next.js-Grundgerüst (App Router, TypeScript, Tailwind) aufgesetzt
+4. ✅ Desktop-UI-Komponente nach Wireframe gebaut (`src/components/desktop`),
+   Auftragsstatus-App mit Suche + klickbarer Pipeline (`src/components/auftragsstatus`)
+5. ✅ Firmenvorschläge (6) und Produktkatalog (Fahrrad-/E-Bike-Zubehör, eigenständig)
+   als Seed-Daten (`prisma/seed-data`)
+6. ✅ Routen-Grundgerüst: `/`, `/play` (PIN-Beitritt), `/teacher`, `/admin`,
+   `/app` (Desktop), `/app/[app]` (Einzel-Apps)
+
+**Noch offen:**
+7. Supabase-Projekt (EU-Region) anlegen, Migration + Seed gegen echte DB laufen
+   lassen (lokal vorbereitet, siehe SETUP.md)
+8. Auth-Flows für Admin/Lehrkraft (Supabase Auth) real anbinden
+9. PIN-Beitritt für Teilnehmer:innen serverseitig umsetzen (Participant anlegen,
+   Session-Token statt Login)
+10. Posteingang-Workflow als erstes vertikales Feature Ende-zu-Ende (ein
+    Vorgangstyp, z.B. Kundenanfrage → Angebot → Bestellung) inkl. Realtime-Test
+    mit zwei gleichzeitigen Teilnehmer:innen derselben Firma
+11. Übrige Apps (Bestellungen, Warenannahme, Lieferanten, Kundensuche,
+    Warenversand, Auftragsbearbeitung, Lager, Onlinebanking, Buchungssätze,
+    Kalkulation) von Platzhalter zu echter Funktion

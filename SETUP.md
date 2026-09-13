@@ -1,178 +1,81 @@
-# Firebase & Vercel Setup
+# Supabase & Vercel Setup
 
-## 1. Firebase Projekt erstellen
+## 1. Supabase-Projekt erstellen
 
-### Schritt 1: Firebase Console
-1. Gehe zu [Firebase Console](https://console.firebase.google.com/)
-2. Klicke auf "Projekt hinzufügen"
-3. Name: **ecosim** (oder ein anderer Name)
-4. Google Analytics kann optional aktiviert werden
-5. Projekt erstellen
+1. Gehe zu [supabase.com](https://supabase.com), mit GitHub anmelden
+2. "New Project" → Name: **ecosim**
+3. **Region: Frankfurt (EU)** wählen – Pflicht für DSGVO-Konformität
+   (siehe KONZEPT.md Abschnitt 3/6)
+4. Datenbank-Passwort setzen und sicher notieren
 
-### Schritt 2: Web App hinzufügen
-1. In der Projektübersicht: "Web" Icon klicken (</> Symbol)
-2. App-Spitzname: **ecosim-web**
-3. Firebase Hosting **NICHT** einrichten (wir nutzen Vercel)
-4. App registrieren
+## 2. Zugangsdaten eintragen
 
-### Schritt 3: Konfigurationswerte kopieren
-Nach der Registrierung werden dir die Config-Werte angezeigt:
+In den Projekteinstellungen (Settings → API bzw. Settings → Database):
 
-```javascript
-const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "ecosim-xxxxx.firebaseapp.com",
-  projectId: "ecosim-xxxxx",
-  storageBucket: "ecosim-xxxxx.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:xxxxx"
-};
+```bash
+cp .env.local.example .env.local
 ```
 
-**Trage diese Werte in `.env.local` ein!**
+Trage ein:
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Settings → API
+- `SUPABASE_SERVICE_ROLE_KEY` – Settings → API (niemals clientseitig verwenden!)
+- `DATABASE_URL` / `DIRECT_URL` – Settings → Database → Connection string
+  (Connection Pooling für `DATABASE_URL`, direkte Verbindung für `DIRECT_URL`)
 
-### Schritt 4: Authentication aktivieren
-1. Im Firebase-Menü: **Authentication** → **Get Started**
-2. Sign-in method → **Anonymous** aktivieren
-3. Speichern
+## 3. Datenbankschema anlegen
 
-### Schritt 5: Firestore Database erstellen
-1. Im Firebase-Menü: **Firestore Database** → **Create database**
-2. Location: **europe-west** (Europa) wählen
-3. **Im Testmodus starten** (später ändern wir die Rules)
-4. Database erstellen
-
-### Schritt 6: Firestore Security Rules anwenden
-1. In der Firebase Console → **Firestore Database** → **Rules**
-2. Ersetze den Inhalt mit dem Inhalt aus `firestore.rules` (aus diesem Projekt)
-3. Veröffentlichen
-
-### Schritt 7: Storage Rules (optional, später)
-1. Im Firebase-Menü: **Storage** → **Get Started**
-2. Im Produktionsmodus starten
-3. Rules aus `firebase.rules` übernehmen
-
----
-
-## 2. Lokale Entwicklung testen
-
-### Schritt 1: Dependencies installieren
 ```bash
 npm install
+npm run prisma:migrate
+npm run db:seed
 ```
 
-### Schritt 2: .env.local prüfen
-Stelle sicher, dass `.env.local` deine Firebase-Credentials enthält.
+Das legt alle Tabellen aus `prisma/schema.prisma` an und befüllt
+Firmenvorschläge, Produktkatalog, Lieferanten und Kunden mit den Daten aus
+`prisma/seed-data/`.
 
-### Schritt 3: Development Server starten
+## 4. Row Level Security (RLS)
+
+Supabase aktiviert RLS standardmäßig für neue Tabellen. Da Teilnehmer:innen
+**kein** Supabase Auth nutzen (siehe KONZEPT.md Abschnitt 2/3 – Session-Token
+statt Login), läuft der Zugriff für die Spiel-Objekte serverseitig über
+Next.js Route Handler mit dem Service-Role-Key, nicht direkt vom Client aus.
+Nur Admin-/Lehrkraft-Tabellen werden über Supabase Auth + RLS-Policies
+abgesichert. Details folgen, sobald die Auth-Flows gebaut sind.
+
+## 5. Authentication (Admin/Lehrkraft)
+
+1. Supabase → **Authentication** → **Providers** → Email aktivieren
+2. Keine Anonymous-Auth nötig (Teilnehmer:innen laufen über eigenen
+   PIN-Beitritt, nicht über Supabase Auth)
+
+## 6. Lokale Entwicklung
+
 ```bash
 npm run dev
 ```
 
 App läuft unter: http://localhost:3000
 
----
+## 7. Vercel Deployment
 
-## 3. Vercel Deployment
+1. [vercel.com](https://vercel.com) → mit GitHub anmelden → "New Project"
+2. Repository **ecosim** importieren, Framework Next.js wird erkannt
+3. Alle Variablen aus `.env.local` unter Settings → Environment Variables eintragen
+4. Deploy
 
-### Schritt 1: Vercel Account
-1. Gehe zu [vercel.com](https://vercel.com)
-2. Mit GitHub anmelden
-3. "New Project" klicken
+Jeder Push zu `main` löst automatisch ein Deployment aus.
 
-### Schritt 2: Repository importieren
-1. Wähle dein **ecosim** Repository
-2. Framework Preset: **Next.js** (automatisch erkannt)
-3. Root Directory: `./` (Standard)
+## 8. Datenlöschung (DSGVO)
 
-### Schritt 3: Environment Variables hinzufügen
-Füge alle Variablen aus `.env.local` hinzu:
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=ecosim-xxxxx.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=ecosim-xxxxx
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ecosim-xxxxx.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:xxxxx
-```
-
-### Schritt 4: Deploy!
-1. Klicke auf "Deploy"
-2. Warte 2-3 Minuten
-3. Deine App ist live! 🎉
-
-### Schritt 5: Custom Domain (optional)
-1. In Vercel: Settings → Domains
-2. Füge deine Domain hinzu (z.B. `ecosim.schule.de`)
-3. Folge den DNS-Anweisungen
-
----
-
-## 4. Firebase Authorized Domains aktualisieren
-
-Nach dem Vercel-Deployment:
-
-1. Firebase Console → **Authentication** → **Settings** → **Authorized domains**
-2. Füge deine Vercel-URL hinzu: `ecosim-xxxxx.vercel.app`
-3. Falls Custom Domain: auch diese hinzufügen
-
----
-
-## 5. Automatische Deployments
-
-**Jeder Push zu `main` Branch löst automatisch ein Vercel-Deployment aus!**
-
-- Pull Requests erstellen Preview-Deployments
-- Production ist immer `main` Branch
-
----
-
-## Troubleshooting
-
-### "Firebase: Error (auth/unauthorized-domain)"
-→ Vercel-URL zu Firebase Authorized Domains hinzufügen
-
-### "FirebaseError: Missing or insufficient permissions"
-→ Firestore Rules überprüfen und neu veröffentlichen
-
-### Build-Fehler bei Vercel
-→ Prüfe, ob alle Dependencies in `package.json` sind
-→ Prüfe TypeScript-Fehler mit `npm run build` lokal
-
-### Environment Variables funktionieren nicht
-→ Vercel: Settings → Environment Variables neu setzen
-→ Projekt neu deployen (Redeploy-Button)
-
----
+Spieldaten sollen 90 Tage nach Spielende automatisch gelöscht werden
+(`GameSession.expiresAt`, siehe KONZEPT.md Abschnitt 7). Umsetzung z.B. über
+einen Supabase Cron Job oder Vercel Cron, der abgelaufene `GameSession`s
+inkl. verknüpfter Companies/Participants/Orders löscht – noch zu bauen.
 
 ## Nützliche Links
 
-- [Firebase Console](https://console.firebase.google.com/)
+- [Supabase Dashboard](https://app.supabase.com)
 - [Vercel Dashboard](https://vercel.com/dashboard)
-- [Firebase Docs](https://firebase.google.com/docs)
+- [Prisma Docs](https://www.prisma.io/docs)
 - [Next.js Docs](https://nextjs.org/docs)
-- [Vercel Docs](https://vercel.com/docs)
-
----
-
-## Checkliste
-
-- [ ] Firebase Projekt erstellt
-- [ ] Web App in Firebase registriert
-- [ ] Anonymous Auth aktiviert
-- [ ] Firestore Database erstellt
-- [ ] Firestore Rules veröffentlicht
-- [ ] `.env.local` mit echten Werten ausgefüllt
-- [ ] `npm install` ausgeführt
-- [ ] `npm run dev` funktioniert lokal
-- [ ] Vercel Account erstellt
-- [ ] Repository in Vercel importiert
-- [ ] Environment Variables in Vercel gesetzt
-- [ ] Erster Deploy erfolgreich
-- [ ] Vercel-URL zu Firebase Authorized Domains hinzugefügt
-- [ ] App funktioniert in Production!
-
----
-
-Bei Fragen oder Problemen: Melde dich! 😊

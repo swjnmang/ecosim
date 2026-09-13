@@ -4,12 +4,9 @@ out/
 build/
 dist/
 *.pem
+.env
 .env.local
 .env.*.local
 .DS_Store
 .vercel
-.firebase/
-
-# Firebase Service Account Keys (NEVER commit these!)
-*-firebase-adminsdk-*.json
-serviceAccountKey.json
+next-env.d.ts
