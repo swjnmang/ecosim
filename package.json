@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:developer": "node scripts/setup-developer.js",
+    "create:developer": "node scripts/create-developer.js"
   },
   "dependencies": {
     "firebase": "^10.7.0",

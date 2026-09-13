@@ -26,6 +26,17 @@ export default function DeveloperDashboardPage() {
   const [success, setSuccess] = useState('');
   const [creating, setCreating] = useState(false);
 
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editNumberOfStudents, setEditNumberOfStudents] = useState('');
+  const [editContactEmail, setEditContactEmail] = useState('');
+  const [editing, setEditing] = useState(false);
+  
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
@@ -99,6 +110,92 @@ export default function DeveloperDashboardPage() {
       setError(`Fehler: ${err.message || 'Unbekannter Fehler'}`);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleEditSchool = async (school: School) => {
+    setEditingId(school.id);
+    setEditName(school.name);
+    setEditNumberOfStudents(school.numberOfStudents.toString());
+    setEditContactEmail(school.contactEmail);
+    setError('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    
+    setError('');
+    setSuccess('');
+    setEditing(true);
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Authentifizierung erforderlich');
+
+      const response = await fetch(`/api/schools/${editingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: editName,
+          numberOfStudents: parseInt(editNumberOfStudents),
+          contactEmail: editContactEmail,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fehler beim Speichern');
+      }
+
+      setSuccess('Schule erfolgreich aktualisiert');
+      setEditingId(null);
+      await loadSchools();
+    } catch (err: any) {
+      console.error('Error saving school:', err);
+      setError(err.message || 'Fehler beim Speichern der Schule');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleDeleteSchool = async (schoolId: string) => {
+    if (deleteConfirm !== 'LÖSCHEN') {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setEditing(true);
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Authentifizierung erforderlich');
+
+      const response = await fetch(`/api/schools/${schoolId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fehler beim Löschen');
+      }
+
+      setSuccess('Schule gelöscht');
+      setDeletingId(null);
+      setDeleteConfirm('');
+      await loadSchools();
+    } catch (err: any) {
+      console.error('Error deleting school:', err);
+      setError(err.message || 'Fehler beim Löschen der Schule');
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -319,12 +416,149 @@ export default function DeveloperDashboardPage() {
                         </p>
                       </div>
                     </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditSchool(school)}
+                        className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 rounded-lg border border-blue-500/50 transition-all text-sm font-medium"
+                      >
+                        ✏️ Bearbeiten
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(school.id)}
+                        className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg border border-red-500/50 transition-all text-sm font-medium"
+                      >
+                        🗑️ Löschen
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Edit School Modal */}
+        {editingId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 max-w-2xl w-full">
+              <h2 className="text-2xl font-bold text-white mb-6">Schule bearbeiten</h2>
+
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-200 mb-2">
+                    Schulname *
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">
+                      Anzahl Schüler/innen *
+                    </label>
+                    <input
+                      type="number"
+                      value={editNumberOfStudents}
+                      onChange={(e) => setEditNumberOfStudents(e.target.value)}
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      min="1"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-200 mb-2">
+                      Kontakt E-Mail *
+                    </label>
+                    <input
+                      type="email"
+                      value={editContactEmail}
+                      onChange={(e) => setEditContactEmail(e.target.value)}
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={editing}
+                    className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {editing ? 'Wird gespeichert...' : 'Speichern'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(null)}
+                    className="px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deletingId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-red-400 mb-4">⚠️ Schule löschen</h2>
+
+              <p className="text-gray-300 mb-6">
+                Bist du sicher, dass du diese Schule löschen möchtest? 
+                <br />
+                <br />
+                <strong>Dies löscht auch:</strong>
+                <ul className="mt-2 ml-4 space-y-1 text-sm">
+                  <li>• Den Schuladmin-Account</li>
+                  <li>• Alle Lehrer-Accounts der Schule</li>
+                  <li>• Alle Lobby und Spieldaten</li>
+                </ul>
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-200 mb-2">
+                  Gib "LÖSCHEN" ein zum Bestätigen:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="LÖSCHEN"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleDeleteSchool(deletingId)}
+                  disabled={deleteConfirm !== 'LÖSCHEN' || editing}
+                  className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {editing ? 'Wird gelöscht...' : 'Wirklich löschen'}
+                </button>
+                <button
+                  onClick={() => {
+                    setDeletingId(null);
+                    setDeleteConfirm('');
+                  }}
+                  className="flex-1 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
